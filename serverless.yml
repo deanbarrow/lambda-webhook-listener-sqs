@@ -1,0 +1,32 @@
+service: webhook-listener
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  memorySize: 128
+  profile: [profile]
+  stage: v1
+  region: [region]
+  environment:
+    AWS_SQS_QUEUE_URL: { Ref: SQSQueue }
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sqs:SendMessage
+      Resource:
+        Fn::GetAtt: [ SQSQueue, Arn ]
+
+resources:
+  Resources:
+    SQSQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: webhooks-${sls:instanceId}-${opt:stage, self:provider.stage}
+
+functions:
+  webhook:
+    handler: handler.webhook
+    events:
+      - http:
+          path: /webhook
+          method: post
